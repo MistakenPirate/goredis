@@ -18,5 +18,5 @@ func setupFlags(){
 func main(){
 	setupFlags()
 	log.Println("initiating the server")
-	server.RunSyncTCPServer()
+	server.RunAsyncTCPServer()
 }
