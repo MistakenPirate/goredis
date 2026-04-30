@@ -1,3 +1,5 @@
+//go:build linux
+
 package server
 
 import (
@@ -9,11 +11,6 @@ import (
 	"github.com/mistakenpirate/goredis/config"
 	"github.com/mistakenpirate/goredis/core"
 )
-
-
-var con_clients int = 0
-var cronFrequency time.Duration =  1 * time.Second
-var lastCronExecTime time.Time = time.Now()
 
 func RunAsyncTCPServer() error {
 	log.Println("starting an asynchronous TCP server on", config.Host, config.Port)
