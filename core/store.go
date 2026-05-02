@@ -1,6 +1,10 @@
 package core
 
-import "time"
+import (
+	"time"
+
+	"github.com/mistakenpirate/goredis/config"
+)
 
 var store map[string]*Obj
 
@@ -26,13 +30,16 @@ func NewObj(value interface{}, durationMs int64) *Obj {
 }
 
 func Put(k string, obj *Obj) {
+	if len(store) >= config.KeysLimit {
+		evict()
+	}
 	store[k] = obj
 }
 
 func Get(k string) *Obj {
-	v:= store[k]
-	if v!=nil{
-		if v.ExpiresAt != -1 && v.ExpiresAt <= time.Now().UnixMilli(){
+	v := store[k]
+	if v != nil {
+		if v.ExpiresAt != -1 && v.ExpiresAt <= time.Now().UnixMilli() {
 			delete(store, k)
 			return nil
 		}
@@ -41,7 +48,7 @@ func Get(k string) *Obj {
 }
 
 func Del(k string) bool {
-	if _, ok := store[k]; ok{
+	if _, ok := store[k]; ok {
 		delete(store, k)
 		return true
 	}
