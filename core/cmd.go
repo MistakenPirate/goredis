@@ -1,6 +1,8 @@
 package core
 
 type RedisCmd struct {
-	Cmd string
+	Cmd  string
 	Args []string
 }
+
+type RedisCmds []*RedisCmd

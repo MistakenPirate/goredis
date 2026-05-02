@@ -22,13 +22,13 @@ func RunAsyncTCPServer() error {
 
 	// create a socket
 	serverFD, err := syscall.Socket(syscall.AF_INET, syscall.O_NONBLOCK|syscall.SOCK_STREAM, 0)
-	if err != nil{
-		return err 
+	if err != nil {
+		return err
 	}
 	defer syscall.Close(serverFD)
 
 	// set the socket operate in a non-blocking mode
-	if err = syscall.SetNonblock(serverFD, true); err != nil{
+	if err = syscall.SetNonblock(serverFD, true); err != nil {
 		return err
 	}
 
@@ -37,20 +37,20 @@ func RunAsyncTCPServer() error {
 	if err = syscall.Bind(serverFD, &syscall.SockaddrInet4{
 		Port: config.Port,
 		Addr: [4]byte{ip4[0], ip4[1], ip4[2], ip4[3]},
-	}); err != nil{
+	}); err != nil {
 		return err
 	}
 
 	// start listening
-	if err = syscall.Listen(serverFD, max_clients); err != nil{
-		return err 
+	if err = syscall.Listen(serverFD, max_clients); err != nil {
+		return err
 	}
 
 	// AsyncIO starts here!!
 
 	// creating EPOLL instance
 	epollFD, err := syscall.EpollCreate(0)
-	if err != nil{
+	if err != nil {
 		log.Fatal(err)
 	}
 	defer syscall.Close(epollFD)
@@ -59,31 +59,31 @@ func RunAsyncTCPServer() error {
 	// and set the socket on which
 	var socketServerEvents syscall.EpollEvent = syscall.EpollEvent{
 		Events: syscall.EPOLLIN,
-		Fd: int32(serverFD),
+		Fd:     int32(serverFD),
 	}
 
 	// listen to read events on the server itself
-	if err = syscall.EpollCtl(epollFD, syscall.EPOLL_CTL_ADD, serverFD, &socketServerEvents); err != nil{
+	if err = syscall.EpollCtl(epollFD, syscall.EPOLL_CTL_ADD, serverFD, &socketServerEvents); err != nil {
 		return err
 	}
 
-	for{
-		if time.Now().After(lastCronExecTime.Add(cronFrequency)){
+	for {
+		if time.Now().After(lastCronExecTime.Add(cronFrequency)) {
 			core.DeleteExpiredKeys()
 			lastCronExecTime = time.Now()
 		}
 		// see if any FD is ready for an IO
 		nevents, e := syscall.EpollWait(epollFD, events[:], -1)
-		if e != nil{
+		if e != nil {
 			continue
 		}
 
-		for i := 0;i< nevents; i++{
+		for i := 0; i < nevents; i++ {
 			// if the socket server itself is ready for an IO
-			if int(events[i].Fd) == serverFD{
+			if int(events[i].Fd) == serverFD {
 				// accept the incoming connection from a client
 				fd, _, err := syscall.Accept(serverFD)
-				if err != nil{
+				if err != nil {
 					log.Println("err", err)
 					continue
 				}
@@ -95,21 +95,21 @@ func RunAsyncTCPServer() error {
 				// add this new TCP connection to be monitored
 				var socketClientEvent syscall.EpollEvent = syscall.EpollEvent{
 					Events: syscall.EPOLLIN,
-					Fd: int32(fd),
+					Fd:     int32(fd),
 				}
-				
+
 				if err := syscall.EpollCtl(epollFD, syscall.EPOLL_CTL_ADD, fd, &socketClientEvent); err != nil {
 					log.Fatal(err)
 				}
-			} else{
+			} else {
 				comm := core.FDComm{Fd: int(events[i].Fd)}
-				cmd, err := readCommand(comm)
-				if err != nil{
+				cmds, err := readCommands(comm)
+				if err != nil {
 					syscall.Close(int(events[i].Fd))
 					con_clients -= 1
 					continue
 				}
-				respond(cmd, comm)
+				respond(cmds, comm)
 			}
 		}
 	}

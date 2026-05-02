@@ -46,11 +46,11 @@ func RunAsyncTCPServer() error {
 			}()
 
 			for {
-				cmd, err := readCommand(conn)
+				cmds, err := readCommands(conn)
 				if err != nil {
 					return
 				}
-				respond(cmd, conn)
+				respond(cmds, conn)
 			}
 		}(c)
 	}
